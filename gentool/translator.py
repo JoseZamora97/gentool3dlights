@@ -143,7 +143,7 @@ class DataGenFunctsInterface:
         This method should remove all lights.
         """
         pass
-    
+
     def load_material(self, object_loaded, material: Material):
         """
         This method loads all the materials.
@@ -165,26 +165,27 @@ class DataGenFunctsInterface:
         :param o: Object config params
         """
         pass
-    
+
     def get_light_params(self, light: Light):
         """
         Returns light location and color
         :param light: Light config params
         """
         pass
-    
+
     def export_normalized_object(self, path):
         """
         Save the object normalized.
         :param path: output params.
         """
         pass
-    
+
     def clear_objects(self):
         """
         Clear the scene objects.
         """
         pass
+
 
 class DatasetsGenerator(Thread):
     def __init__(self, config: Config, functs: DataGenFunctsInterface, preview: bool):
@@ -195,26 +196,35 @@ class DatasetsGenerator(Thread):
         self.preview = preview
 
     def run(self):
-        
+
         self.functs.create_environment(self.config.environment)
 
         # Create the headers for saving lights in csv. 
         lights_list = [
-            (f"light_{i}-x", f"light_{i}-y", f"light_{i}-z", f"light_{i}-r", f"light_{i}-g", f"light_{i}-b", f"light_{i}-e")
+            (f"light_{i}-x", f"light_{i}-y", f"light_{i}-z", f"light_{i}-r", f"light_{i}-g", f"light_{i}-b",
+             f"light_{i}-e")
             for i, _ in enumerate(self.config.lights)
         ]
         lights_list = [item for sublist in lights_list for item in sublist]
         # Create the csv headers.
         data_csv_list = [['index', 'object', 'view-x', 'view-y', 'view-z', *lights_list], ]
 
+        os.makedirs(self.config.render.output_dir_path)
+        csv_path = os.path.join(self.config.render.output_dir_path, f"data.csv")
+
+        csv_file = open(csv_path, "w", newline="")
+        writer = csv.writer(csv_file)
+        writer.writerows(data_csv_list)
+
         index = 0
-        
-        camera = self.functs.create_camera()
 
         for obj in self.config.objects:
-            
+
+            data_csv_list = []
+
+            camera = self.functs.create_camera()
             viewpoints = self.functs.create_viewpoints(self.config.viewpoints, self.preview)
-            
+
             # Load the object and store the reference.
             object_loaded = self.functs.load_object(obj, size_env=self.config.environment.dimension)
             object_loaded.select_set(True)
@@ -222,29 +232,29 @@ class DatasetsGenerator(Thread):
             # Create an object folder
             obj_path = os.path.join(self.config.render.output_dir_path, obj.name)
             os.makedirs(obj_path)
-            
+
             # Export normalized object
             if obj.normalize:
                 self.functs.export_normalized_object(path=os.path.join(obj_path, f"{obj.name}_normalized.obj"))
-            
+
             index_render = 0
 
             # Iterate over viewpoint
             for viewpoint in viewpoints:
-                
+
                 # Iterate over each viewpoint coordinate
                 for coords in viewpoint:
-                    
+
                     data_csv_list_item = [index, obj.name, *coords]
-                    
+
                     # Move the camera to the coordinates
                     self.functs.move_camara_to(camera, coords)
-                    
+
                     # Create the lights
                     for light in self.config.lights:
                         li = self.functs.create_light(light)
                         data_csv_list_item += self.functs.get_light_params(li)
-                    
+
                     # Create the folder for saving the model renders.
                     path_render_index = os.path.join(obj_path, f"{index_render}")
                     os.makedirs(path_render_index)
@@ -261,21 +271,16 @@ class DatasetsGenerator(Thread):
 
                     # Clear the lights
                     self.functs.clear_lights()
-                    
+
                     # Append the new row for csv saving.
                     data_csv_list.append(data_csv_list_item)
-                    
+
                     # Update indexes.
                     index_render += 1
                     index += 1
 
                 # Todo: make UI progress bar.
-
-            csv_path = os.path.join(self.config.render.output_dir_path, f"{obj.name}.csv")
-            with open(csv_path, "w", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerows(data_csv_list)
-            
+            writer.writerows(data_csv_list)
             self.functs.clear_objects()
 
         # Open output folder to see the results.

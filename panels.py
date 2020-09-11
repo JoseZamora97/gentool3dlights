@@ -6,7 +6,7 @@ from .operators import OP_OT_ClearScene, OP_OT_GenerateDataset
 class ToolPanel:
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "GenTool3D"
+    bl_category = "GenTool3DLights"
 
 
 class PL_PT_root(ToolPanel, Panel):
@@ -47,7 +47,7 @@ class PL_PT_gui(ToolPanel, Panel):
         layout.label(text="Model options:")
         layout.prop(tool, "input_model")
         layout.prop(tool, "normalize")
-        
+
         # Light options
         layout.separator()
         layout.label(text="Light options:")

@@ -142,17 +142,18 @@ class LightCreator:
     def create_light(kind: str, color: tuple, location: tuple, energy: int) -> object:
         """
         Create a blender light source in the scene.
-        @param: kind: 'POINT' or 'SUN'.
+        @param: kind: 'POINT'.
         @param: color: light color.
         @param: location: light location.
         @param: range_position: max & min range to generate randoms locations.
         """
         light_data = bpy.data.lights.new(name=UtilsName.light_name, type=kind)
         light_object = bpy.data.objects.new(name=UtilsName.light_name, object_data=light_data)
+
         light_object.location = location
         light_data.color = color
         light_data.energy = energy
-        
+
         view_layer = bpy.context.view_layer
         view_layer.active_layer_collection.collection.objects.link(light_object)
 
@@ -174,7 +175,7 @@ def get_min_max(o, respect_to: tuple = (0, 0, 0)):
         miny = min(v.co.y, miny)
         maxz = max(v.co.z, maxz)
         minz = min(v.co.z, minz)
-    
+
     # Saber el mayor.
     x = compute_translation(minx, maxx, respect_to=respect_to[0])
     y = compute_translation(miny, maxy, respect_to=respect_to[1])
@@ -190,17 +191,17 @@ class ObjectNormalizer:
         obj.scale = (scale_factor, scale_factor, scale_factor)
 
     @staticmethod
-    def translate_object(obj, to: tuple = (.0,.0,.0), tolerance=1): 
+    def translate_object(obj, to: tuple = (.0, .0, .0), tolerance=1):
         coords = coords_prev = None
         counter = 0
-        
+
         while coords != to and counter < tolerance:
             coords = get_min_max(obj, respect_to=to)
-            
+
             if (coords == coords_prev):
                 counter += 1
                 continue
-            
+
             coords_prev = coords
             bpy.ops.transform.transform(mode='TRANSLATION', value=(*coords, 0.0))
             obj.data.transform(obj.matrix_world)
@@ -220,8 +221,8 @@ class ObjectIO:
         assert os.path.exists(path), "Not such file or directory!"
         _, extension = os.path.splitext(path)
         assert extension in ObjectIO.extensions_allowed, f"No extension allowed. Only {ObjectIO.extensions_allowed} are " \
-                                                       f"supported for now. "
-        
+                                                         f"supported for now. "
+
         ObjectIO.extensions_allowed.get(extension)(filepath=path, use_smooth_groups=True)
         obj = bpy.context.selected_objects[0]
         obj.name = f"{UtilsName.model_name}-{os.path.basename(path)}"
@@ -295,6 +296,9 @@ class RenderHandler:
             RenderHandler.set_cycles(transparent=True, samples=samples)
         else:
             bpy.context.scene.render.engine = RenderHandler.ENGINE_EEVEE
+            bpy.context.scene.render.film_transparent = True
+            bpy.context.scene.eevee.taa_render_samples = samples
+
         bpy.ops.render.render(use_viewport=True, write_still=True)
 
 
@@ -374,7 +378,7 @@ class MaterialHandler:
         f"{Material.Texture.WOOD}_{SHADE}": (0.262, 0.112, 0.08, 1),
         f"{Material.Texture.GOLD}_{SHADE}": (0.8, 0.44, 0.02, 1)
     }
-    
+
     TEXTURES = {
         Material.Texture.MARBLE: "marmol",
         Material.Texture.CRYSTAL: "vidrio",
@@ -439,13 +443,12 @@ class MaterialHandler:
 
         apply_light()
 
-
     @staticmethod
     def apply_material_to(model, material: str, apply_light: callable):
         assert material in MaterialHandler.MATERIALS, "MaterialHandler not allowed!"
         MaterialHandler._create_material(
-            material_name=MaterialHandler.MATERIALS.get(material), 
-            model=model, 
+            material_name=MaterialHandler.MATERIALS.get(material),
+            model=model,
             apply_light=apply_light
         )
 
@@ -484,8 +487,8 @@ class DataGenApplyFuncts(DataGenFunctsInterface):
 
     def render(self, path: str, render_style: str, texture: str, object_loaded):
         RenderHandler.render(
-            path=os.path.join(path, f"{RenderHandler.ENGINE_CYCLES}.{RenderHandler.IMG_FORMAT}"),
-            engine=RenderHandler.ENGINE_CYCLES,
+            path=os.path.join(path, f"{RenderHandler.ENGINE_EEVEE}.{RenderHandler.IMG_FORMAT}"),
+            engine=RenderHandler.ENGINE_EEVEE,
             samples=100
         )
         RenderHandler.render(
@@ -536,22 +539,26 @@ class DataGenApplyFuncts(DataGenFunctsInterface):
 
     def create_light(self, li: Light):
         if li.kind == Light.Kind.STATIC_LIGHT:
-            return LightCreator.create_light(kind='POINT', color=tuple(li.color), location=tuple(li.location))
+            return LightCreator.create_light(kind='POINT', color=tuple(li.color),
+                                             location=tuple(li.location), energy=li.max_energy)
 
         if li.kind == Light.Kind.DYNAMIC_LIGHT:
             return LightCreator.create_light(kind='POINT', color=tuple(li.color),
-                                      location=create_random_3_tuple(0 - li.max_range, li.max_range))
+                                             location=create_random_3_tuple(0 - li.max_range, li.max_range),
+                                             energy=random.uniform(0, li.max_energy))
 
         if li.kind == Light.Kind.RAINBOW_STATIC_LIGHT:
             return LightCreator.create_light(kind='POINT', color=create_random_3_tuple(0, 1),
-                                      location=create_random_3_tuple(0 - li.max_range, li.max_range))
+                                             location=create_random_3_tuple(0 - li.max_range, li.max_range),
+                                             energy=li.max_energy)
 
         if li.kind == Light.Kind.RAINBOW_DYNAMIC_LIGHT:
             return LightCreator.create_light(kind='POINT', color=create_random_3_tuple(0, 1),
-                                      location=create_random_3_tuple(0 - li.max_range, li.max_range))
-    
+                                             location=create_random_3_tuple(0 - li.max_range, li.max_range),
+                                             energy=random.uniform(0, li.max_energy))
+
     def get_light_params(self, light):
-        return [*light.location.xyz, *light.color]
+        return [*light.location.xyz, *light.data.color, light.data.energy]
 
     def load_object(self, o: Object, size_env: int):
         obj = ObjectIO.load(

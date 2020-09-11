@@ -1,6 +1,5 @@
 import bpy
 
-
 from .operators import OP_OT_ClearScene
 from .operators import OP_OT_GenerateDataset
 from .panels import PL_PT_file
@@ -9,9 +8,8 @@ from .panels import PL_PT_gui
 from .panels import PL_PT_root
 from .properties import Properties
 
-
 bl_info = {
-    "name": "3D Multiview Lights Datasets Generation Tool",
+    "name": "3D GenTool Lights",
     "author": "Jose Zamora",
     "description": "",
     "blender": (2, 80, 0),
