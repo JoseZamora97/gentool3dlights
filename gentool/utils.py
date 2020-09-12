@@ -152,7 +152,7 @@ class LightCreator:
 
         light_object.location = location
         light_data.color = color
-        light_data.energy = energy
+        light_data.energy = 1000
 
         view_layer = bpy.context.view_layer
         view_layer.active_layer_collection.collection.objects.link(light_object)

@@ -259,15 +259,14 @@ class DatasetsGenerator(Thread):
                     path_render_index = os.path.join(obj_path, f"{index_render}")
                     os.makedirs(path_render_index)
 
-                    # Render the diferent styles.
+                    # Render the scene.
                     self.functs.set_render_resolution(self.config.render)
-                    for render_style in self.config.render.styles:
-                        self.functs.render(
-                            path=path_render_index,
-                            render_style=render_style,
-                            texture="",
-                            object_loaded=object_loaded
-                        )
+                    self.functs.render(
+                        path=path_render_index,
+                        render_style="",
+                        texture="",
+                        object_loaded=object_loaded
+                    )
 
                     # Clear the lights
                     self.functs.clear_lights()
@@ -285,3 +284,4 @@ class DatasetsGenerator(Thread):
 
         # Open output folder to see the results.
         webbrowser.open('file:///' + os.path.abspath(self.config.render.output_dir_path))
+        csv_file.close()
