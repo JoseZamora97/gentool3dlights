@@ -36,7 +36,7 @@ def create_config_from_gui(properties):
         color=properties.light_color,
         location=properties.light_location,
         max_range=properties.light_range_location,
-        max_energy=properties.light_energy
+        max_energy=None
     )
 
     styles = [Render.Style.NORMAL]

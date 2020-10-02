@@ -91,12 +91,13 @@ class Light:
         self.max_range = max_range
         self.max_energy = max_energy
 
-    def dynamic_light(self, color: list, max_range: int):
+    def dynamic_light(self, color: list, max_range: int,  max_energy: int):
         assert len(color) == 3, "color must have lenght of 3"
         assert 0.0 <= color[0] <= 1.0, "r-channel must be between 0 and 1"
         assert 0.0 <= color[1] <= 1.0, "g-channel must be between 0 and 1"
         assert 0.0 <= color[2] <= 1.0, "b-channel must be between 0 and 1"
 
+        self.max_energy = max_energy
         self.color = color
         self.kind = self.Kind.DYNAMIC_LIGHT
         self.max_range = max_range

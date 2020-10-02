@@ -28,7 +28,7 @@ class PL_PT_gui(ToolPanel, Panel):
     """
     GUI Configurator holder.
     """
-    bl_label = "GUI Configurator (vBeta)"
+    bl_label = "Sampler (vBeta)"
     bl_idname = "PL_PT_gui"
     bl_parent_id = "PL_PT_root"
 

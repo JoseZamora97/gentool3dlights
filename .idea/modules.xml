@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/gentool3dlights.iml" filepath="$PROJECT_DIR$/.idea/gentool3dlights.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../gentool3dmaterials/.idea/gentool3dmaterials.iml" filepath="$PROJECT_DIR$/../gentool3dmaterials/.idea/gentool3dmaterials.iml" />
+    </modules>
+  </component>
+</project>

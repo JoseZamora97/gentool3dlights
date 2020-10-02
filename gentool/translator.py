@@ -10,13 +10,15 @@ from .basics import Environment, Object, Light, Viewpoint, Render, Material
 
 
 def process(o: Object) -> Dict:
-    o.material = o.material.__dict__
+    if o.material is not None:
+        o.material = o.material.__dict__
     return o.__dict__
 
 
 def reconstruct(o: Dict) -> Object:
-    mat = Material(**(o.get('material')))
-    o.update({'material': mat})
+    if o.get('material') is not None:
+        mat = Material(**(o.get('material')))
+        o.update({'material': mat})
     return Object(**o)
 
 
@@ -28,11 +30,11 @@ class Config:
                  lights: List[Light],
                  viewpoints: List[Viewpoint]):
         assert environment is not None, "environment cant be None!"
-        assert render is not None, "render cant be None!"
         assert objects != [], "objects is empty!"
         assert lights != [], "lights is empty!"
         assert viewpoints != [], "viewpoints is empty!"
-        assert render.output_dir_path != "", "Output directory path not specified!"
+        if render is not None:
+            assert render.output_dir_path != "", "Output directory path not specified!"
 
         self.environment = environment
         self.objects = objects
@@ -47,9 +49,9 @@ class ConfigIO:
         config = {
             "environment": instance.environment.__dict__,
             "objects": [process(obj) for obj in instance.objects],
-            "lights": [light.__dict__ for light in instance.lights],
-            "viewpoints": [viewpoint.__dict__ for viewpoint in instance.viewpoints],
-            "render": instance.render.__dict__
+            "lights": [light.__dict__ for light in instance.lights] if instance.lights is not None else None,
+            "viewpoints": [viewpoint.__dict__ for viewpoint in instance.viewpoints] if instance.lights is not None else None,
+            "render": instance.render.__dict__ if instance.render is not None else None
         }
 
         if path is not None:
@@ -66,13 +68,12 @@ class ConfigIO:
         config = {
             "environment": Environment(**config.get("environment")),
             "objects": [reconstruct(o) for o in config.get("objects")],
-            "lights": [Light(**li) for li in config.get("lights")],
-            "viewpoints": [Viewpoint(**v) for v in config.get("viewpoints")],
-            "render": Render(**config.get("render"))
+            "lights": [Light(**li) for li in config.get("lights")] if config.get("lights") is not None else None,
+            "viewpoints": [Viewpoint(**v) for v in config.get("viewpoints")] if config.get("viewpoints") is not None else None,
+            "render": Render(**config.get("render")) if config.get("render") is not None else None
         }
 
         return Config(**config)
-
 
 class DataGenFunctsInterface:
 
@@ -197,33 +198,27 @@ class DatasetsGenerator(Thread):
 
     def run(self):
 
-        self.functs.create_environment(self.config.environment)
-
-        # Create the headers for saving lights in csv. 
-        lights_list = [
-            (f"light_{i}-x", f"light_{i}-y", f"light_{i}-z", f"light_{i}-r", f"light_{i}-g", f"light_{i}-b",
-             f"light_{i}-e")
-            for i, _ in enumerate(self.config.lights)
-        ]
-        lights_list = [item for sublist in lights_list for item in sublist]
-        # Create the csv headers.
-        data_csv_list = [['index', 'object', 'view-x', 'view-y', 'view-z', *lights_list], ]
-
+        # self.functs.create_environment(self.config.environment)
         os.makedirs(self.config.render.output_dir_path)
-        csv_path = os.path.join(self.config.render.output_dir_path, f"data.csv")
-
-        csv_file = open(csv_path, "w", newline="")
-        writer = csv.writer(csv_file)
-        writer.writerows(data_csv_list)
+        
+        if self.config.render.styles != []:
+            # Create the headers for saving lights in csv. 
+            lights_list = [
+                (f"light_{i}-x", f"light_{i}-y", f"light_{i}-z", f"light_{i}-r", f"light_{i}-g", f"light_{i}-b")
+                for i, _ in enumerate(self.config.lights)
+            ]
+            lights_list = [item for sublist in lights_list for item in sublist]
+            # Create the csv headers.
+            data_csv_list = [['index', 'object', 'view-x', 'view-y', 'view-z', *lights_list, ], ]
+            
+            csv_path = os.path.join(self.config.render.output_dir_path, f"data.csv")
+            csv_file = open(csv_path, "w", newline="")
+            writer = csv.writer(csv_file)
+            writer.writerows(data_csv_list)
 
         index = 0
 
         for obj in self.config.objects:
-
-            data_csv_list = []
-
-            camera = self.functs.create_camera()
-            viewpoints = self.functs.create_viewpoints(self.config.viewpoints, self.preview)
 
             # Load the object and store the reference.
             object_loaded = self.functs.load_object(obj, size_env=self.config.environment.dimension)
@@ -235,30 +230,30 @@ class DatasetsGenerator(Thread):
 
             # Export normalized object
             if obj.normalize:
-                self.functs.export_normalized_object(path=os.path.join(obj_path, f"{obj.name}_normalized.obj"))
+                self.functs.export_normalized_object(path=os.path.join(obj_path, f"normalized.obj"))
 
-            index_render = 0
+            if self.config.render.styles == []:
+                self.functs.clear_objects()
+                continue
 
+            camera = self.functs.create_camera()
+            viewpoints = self.functs.create_viewpoints(self.config.viewpoints, self.preview)
             # Iterate over viewpoint
-            for viewpoint in viewpoints:
-
+            for _, viewpoint in enumerate(viewpoints):
                 # Iterate over each viewpoint coordinate
                 for coords in viewpoint:
-
                     data_csv_list_item = [index, obj.name, *coords]
-
                     # Move the camera to the coordinates
                     self.functs.move_camara_to(camera, coords)
-
                     # Create the lights
-                    for light in self.config.lights:
+                    for _, light in enumerate(self.config.lights):
                         li = self.functs.create_light(light)
-                        data_csv_list_item += self.functs.get_light_params(li)
-
+                        li.data.energy = 1500
+                        light_params = self.functs.get_light_params(li)
+                        data_csv_list_item += light_params
                     # Create the folder for saving the model renders.
-                    path_render_index = os.path.join(obj_path, f"{index_render}")
+                    path_render_index = os.path.join(obj_path, f"{index}")
                     os.makedirs(path_render_index)
-
                     # Render the scene.
                     self.functs.set_render_resolution(self.config.render)
                     self.functs.render(
@@ -267,21 +262,17 @@ class DatasetsGenerator(Thread):
                         texture="",
                         object_loaded=object_loaded
                     )
-
                     # Clear the lights
                     self.functs.clear_lights()
-
                     # Append the new row for csv saving.
+                    writer.writerow(data_csv_list_item)
                     data_csv_list.append(data_csv_list_item)
-
-                    # Update indexes.
-                    index_render += 1
+                    # Update index
                     index += 1
-
                 # Todo: make UI progress bar.
-            writer.writerows(data_csv_list)
             self.functs.clear_objects()
-
         # Open output folder to see the results.
         webbrowser.open('file:///' + os.path.abspath(self.config.render.output_dir_path))
-        csv_file.close()
+        
+        if self.config.render.styles != []:
+            csv_file.close()
