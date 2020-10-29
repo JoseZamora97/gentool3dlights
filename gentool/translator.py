@@ -75,6 +75,7 @@ class ConfigIO:
 
         return Config(**config)
 
+
 class DataGenFunctsInterface:
 
     def create_environment(self, e: Environment):

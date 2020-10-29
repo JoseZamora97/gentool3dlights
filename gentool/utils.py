@@ -484,11 +484,11 @@ class DataGenApplyFuncts(DataGenFunctsInterface):
             samples=100
         ) 
 
-        #RenderHandler.render(
-        #    f"{path}_cycles.{RenderHandler.IMG_FORMAT}",
-        #    engine=RenderHandler.ENGINE_CYCLES,
-        #    samples=100
-        #) 
+        RenderHandler.render(
+            f"{path}/ cycles.{RenderHandler.IMG_FORMAT}",
+            engine=RenderHandler.ENGINE_CYCLES,
+            samples=100
+        )
 
 
     def define_texture(self, o: Object):
